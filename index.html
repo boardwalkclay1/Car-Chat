@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>acar chat – road vibes</title>
+  <title>acar chat – realtime road vibes</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Leaflet CSS for the interactive map -->
+  <!-- Leaflet CSS for the map -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -307,7 +307,6 @@
 
     input[type="text"],
     input[type="url"],
-    select,
     textarea {
       width: 100%;
       padding: 6px 8px;
@@ -344,19 +343,6 @@
       justify-content: flex-end;
       margin-top: 4px;
       gap: 8px;
-    }
-
-    .pills-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 6px;
-    }
-
-    .pills-row .pill {
-      border-radius: 999px;
-      padding: 3px 8px;
-      font-size: 10px;
     }
 
     .chat-card {
@@ -501,12 +487,6 @@
       color: #05060b;
     }
 
-    .btn-icon.secondary {
-      background: transparent;
-      color: var(--accent);
-      border-color: var(--accent);
-    }
-
     .range-row {
       display: flex;
       align-items: center;
@@ -528,17 +508,6 @@
       border-top: 1px solid var(--border);
       background: rgba(5, 6, 11, 0.96);
     }
-
-    .link-soft {
-      color: var(--accent);
-      text-decoration: none;
-      opacity: 0.85;
-    }
-
-    .link-soft:hover {
-      opacity: 1;
-      text-decoration: underline;
-    }
   </style>
 </head>
 <body>
@@ -548,12 +517,12 @@
       <div class="brand-badge">a</div>
       <div>
         <div class="brand-title">acar chat</div>
-        <div class="brand-subtitle">flirt + wave + cruise within 70 miles</div>
+        <div class="brand-subtitle">realtime road vibes · global room v1</div>
       </div>
     </div>
     <div class="header-right">
-      <div class="pill">local-only alpha • your data stays on this device</div>
-      <button class="btn btn-outline" id="clearProfileBtn">Reset device profile</button>
+      <div class="pill" id="wsStatus">socket: connecting…</div>
+      <button class="btn btn-outline" id="resetBtn">Reset local data</button>
     </div>
   </header>
 
@@ -563,13 +532,10 @@
         <div>
           <div class="card-title">road map · live radius</div>
           <div class="card-subtitle">
-            toggle your visibility & cruising radius. this alpha only shows <strong>you</strong> on this browser.
+            this room is <strong>global v1</strong>. everyone connected sees each other's markers.
           </div>
         </div>
-        <div class="pills-row">
-          <div class="pill" id="geoStatus">location: idle</div>
-          <div class="pill" id="radiusLabel">radius: 15 mi</div>
-        </div>
+        <div class="pill" id="radiusLabel">radius: 15 mi</div>
       </div>
 
       <div class="map-container">
@@ -582,9 +548,10 @@
         <span>70 mi</span>
       </div>
 
-      <div class="pills-row">
+      <div style="margin-top: 6px; display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn-outline btn" id="locateBtn">Use my location</button>
-        <button class="btn-outline btn" id="toggleVisibilityBtn">Go visible on map</button>
+        <button class="btn-outline btn" id="toggleShareBtn">Share location</button>
+        <div class="pill" id="geoStatus">location: idle</div>
       </div>
     </section>
 
@@ -601,7 +568,7 @@
             <div class="profile-meta-row">
               <div class="status-row">
                 <span class="status-dot"></span>
-                <span id="profileStatus">local-only, not connected</span>
+                <span id="profileStatus">local profile • global room</span>
               </div>
               <div class="chip hot">device-only profile</div>
             </div>
@@ -611,34 +578,20 @@
         <div class="profile-form">
           <div class="input-row">
             <label for="displayName">display name</label>
-            <input id="displayName" type="text" placeholder="e.g. neon civic, galaxy rider" />
+            <input id="displayName" type="text" placeholder="neon civic, galaxy rider..." />
           </div>
           <div class="input-row">
             <label for="carModel">car + vibe</label>
-            <input id="carModel" type="text" placeholder="e.g. 2018 civic • stargazer" />
-          </div>
-          <div class="input-row">
-            <label for="photoUrl">photo url (optional)</label>
-            <input id="photoUrl" type="url" placeholder="link to your ride or avatar" />
-          </div>
-          <div class="input-row">
-            <label for="mood">current mood</label>
-            <select id="mood">
-              <option value="">choose a vibe</option>
-              <option value="cruising">cruising</option>
-              <option value="flirty">feeling flirty</option>
-              <option value="quiet">quiet ride</option>
-              <option value="meets">open to car meets</option>
-            </select>
+            <input id="carModel" type="text" placeholder="2018 civic • midnight stargazer" />
           </div>
           <div class="input-row full">
             <label for="bio">short profile</label>
-            <textarea id="bio" placeholder="say something short + fun for the road."></textarea>
+            <textarea id="bio" placeholder="keep it kind, playful, consent-first."></textarea>
           </div>
         </div>
 
         <div class="profile-actions">
-          <button class="btn-outline btn" id="loadProfileBtn">Load saved profile</button>
+          <button class="btn-outline btn" id="loadProfileBtn">Load profile</button>
           <button class="btn" id="saveProfileBtn">Save on this device</button>
         </div>
       </div>
@@ -646,20 +599,19 @@
       <div class="chat-card">
         <div class="chat-header-row">
           <div>
-            <div class="card-title">acar chat · road room</div>
+            <div class="card-title">acar chat · global road room</div>
             <div class="card-subtitle">
-              this is a <strong>local-only</strong> preview. chats stay in your browser.
+              everyone connected to this room sees your messages in real time.
             </div>
           </div>
           <div class="chat-badges">
-            <div class="chat-badge hot">prototype · not networked yet</div>
-            <div class="chat-badge">1-on-1 & group logic coming later</div>
+            <div class="chat-badge hot">v1 · no blocking, no reporting · be kind</div>
           </div>
         </div>
 
         <div class="chat-log" id="chatLog">
           <div class="chat-empty">
-            no road vibes yet. set your profile, then send a wave, hug, kiss, or a message to yourself.
+            no road messages yet. say hi, wave, hug, kiss, or flirt respectfully.
           </div>
         </div>
 
@@ -681,11 +633,11 @@
   </main>
 
   <footer>
-    acar chat · local-only road prototype · no servers, no accounts · everything stays in your browser storage.
+    acar chat v1 · realtime global room · HTML + WebSocket on Vercel · profiles stay on your device only.
   </footer>
 </div>
 
-<!-- Leaflet JS for the map -->
+<!-- Leaflet JS -->
 <script
   src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
@@ -693,15 +645,14 @@
 ></script>
 
 <script>
-  // --- local storage keys ----
   const PROFILE_KEY = "acar_profile_v1";
-  const CHAT_KEY = "acar_chat_v1";
-  const MAP_KEY = "acar_map_v1";
+  const CHAT_KEY = "acar_chat_log_v1";
+
+  const wsStatus = document.getElementById("wsStatus");
+  const resetBtn = document.getElementById("resetBtn");
 
   const displayNameInput = document.getElementById("displayName");
   const carModelInput = document.getElementById("carModel");
-  const photoUrlInput = document.getElementById("photoUrl");
-  const moodInput = document.getElementById("mood");
   const bioInput = document.getElementById("bio");
 
   const profileNameDisplay = document.getElementById("profileNameDisplay");
@@ -713,202 +664,156 @@
 
   const saveProfileBtn = document.getElementById("saveProfileBtn");
   const loadProfileBtn = document.getElementById("loadProfileBtn");
-  const clearProfileBtn = document.getElementById("clearProfileBtn");
 
   const chatLog = document.getElementById("chatLog");
   const chatInput = document.getElementById("chatInput");
   const sendBtn = document.getElementById("sendBtn");
   const emotionButtons = document.querySelectorAll(".emotion-btn");
 
-  const locateBtn = document.getElementById("locateBtn");
-  const toggleVisibilityBtn = document.getElementById("toggleVisibilityBtn");
-  const geoStatus = document.getElementById("geoStatus");
-  const radiusLabel = document.getElementById("radiusLabel");
   const radiusInput = document.getElementById("radiusInput");
+  const radiusLabel = document.getElementById("radiusLabel");
+  const locateBtn = document.getElementById("locateBtn");
+  const toggleShareBtn = document.getElementById("toggleShareBtn");
+  const geoStatus = document.getElementById("geoStatus");
 
-  let meMarker = null;
-  let meCircle = null;
-  let visibleOnMap = false;
+  const myId = "u-" + Math.random().toString(36).slice(2, 10);
+
+  let ws = null;
+  let connected = false;
+  let sharingLocation = false;
+  let myLocation = null;
 
   let map = L.map("map", {
-    center: [33.749, -84.388], // atlanta as a neutral center
+    center: [33.749, -84.388],
     zoom: 11,
     zoomControl: false,
   });
-
   L.control.zoom({ position: "bottomright" }).addTo(map);
-
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "&copy; OpenStreetMap",
   }).addTo(map);
+
+  const markers = new Map();
 
   function milesToMeters(mi) {
     return mi * 1609.34;
   }
 
-  function saveMapState(lat, lng, radiusMiles) {
-    const data = { lat, lng, radiusMiles };
-    localStorage.setItem(MAP_KEY, JSON.stringify(data));
-  }
-
-  function loadMapState() {
-    try {
-      const raw = localStorage.getItem(MAP_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function setGeoStatus(text, color) {
-    geoStatus.textContent = text;
-    if (color === "ok") {
-      geoStatus.style.borderColor = "var(--success)";
-      geoStatus.style.color = "#4bffb3";
-    } else if (color === "err") {
-      geoStatus.style.borderColor = "var(--danger)";
-      geoStatus.style.color = "var(--danger)";
-    } else {
-      geoStatus.style.borderColor = "var(--border)";
-      geoStatus.style.color = "var(--muted)";
-    }
-  }
-
   function updateRadiusLabel() {
-    const miles = Number(radiusInput.value);
-    radiusLabel.textContent = "radius: " + miles + " mi";
+    radiusLabel.textContent = "radius: " + radiusInput.value + " mi";
+  }
+  radiusInput.addEventListener("input", updateRadiusLabel);
+  updateRadiusLabel();
+
+  function setWsStatus(text, state) {
+    wsStatus.textContent = "socket: " + text;
+    if (state === "ok") {
+      wsStatus.style.color = "#4bffb3";
+      wsStatus.style.borderColor = "#4bffb3";
+    } else if (state === "err") {
+      wsStatus.style.color = "#ff4b5c";
+      wsStatus.style.borderColor = "#ff4b5c";
+    } else {
+      wsStatus.style.color = "#9ba0c6";
+      wsStatus.style.borderColor = "#252a3f";
+    }
   }
 
-  radiusInput.addEventListener("input", () => {
-    updateRadiusLabel();
-    if (meCircle) {
-      meCircle.setRadius(milesToMeters(Number(radiusInput.value)));
-    }
-    const state = loadMapState();
-    if (state && meMarker) {
-      const latlng = meMarker.getLatLng();
-      saveMapState(latlng.lat, latlng.lng, Number(radiusInput.value));
-    }
-  });
-
-  function updateProfileUI(profile) {
-    const name = profile.displayName || "guest rider";
-    const car = profile.carModel || "no car set yet";
-
-    profileNameDisplay.textContent = name;
-    profileCarDisplay.textContent = car;
-
-    if (profile.mood) {
-      profileStatus.textContent = profile.mood + " • local-only";
+  function setGeo(text, state) {
+    geoStatus.textContent = text;
+    if (state === "ok") {
+      geoStatus.style.color = "#4bffb3";
+      geoStatus.style.borderColor = "#4bffb3";
+    } else if (state === "err") {
+      geoStatus.style.color = "#ff4b5c";
+      geoStatus.style.borderColor = "#ff4b5c";
     } else {
-      profileStatus.textContent = "local-only, not connected";
+      geoStatus.style.color = "#9ba0c6";
+      geoStatus.style.borderColor = "#252a3f";
     }
+  }
 
-    if (profile.photoUrl) {
-      avatarImg.src = profile.photoUrl;
-      avatarImg.style.display = "block";
-      avatarInitial.style.display = "none";
-    } else {
-      avatarImg.style.display = "none";
-      const initial = name.trim().charAt(0).toUpperCase() || "?";
-      avatarInitial.textContent = initial;
-      avatarInitial.style.display = "block";
-    }
+  function getProfile() {
+    return {
+      id: myId,
+      displayName: displayNameInput.value.trim() || "guest rider",
+      carModel: carModelInput.value.trim() || "",
+      bio: bioInput.value.trim() || "",
+    };
+  }
 
-    displayNameInput.value = profile.displayName || "";
-    carModelInput.value = profile.carModel || "";
-    photoUrlInput.value = profile.photoUrl || "";
-    moodInput.value = profile.mood || "";
-    bioInput.value = profile.bio || "";
+  function applyProfileToUI(profile) {
+    profileNameDisplay.textContent = profile.displayName || "guest rider";
+    profileCarDisplay.textContent = profile.carModel || "no car set yet";
+    const initial = (profile.displayName || "g").trim().charAt(0).toUpperCase();
+    avatarInitial.textContent = initial || "?";
+    avatarImg.style.display = "none";
   }
 
   function saveProfile() {
-    const profile = {
-      displayName: displayNameInput.value.trim(),
-      carModel: carModelInput.value.trim(),
-      photoUrl: photoUrlInput.value.trim(),
-      mood: moodInput.value,
-      bio: bioInput.value.trim(),
-    };
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-    updateProfileUI(profile);
-    profileStatus.textContent = "profile saved locally • not online";
+    const p = getProfile();
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+    applyProfileToUI(p);
+    profileStatus.textContent = "profile saved locally • global room";
   }
 
   function loadProfile() {
     try {
       const raw = localStorage.getItem(PROFILE_KEY);
       if (!raw) return;
-      const profile = JSON.parse(raw);
-      updateProfileUI(profile);
-    } catch (e) {
-      console.error("failed to load profile", e);
-    }
-  }
-
-  function clearProfile() {
-    localStorage.removeItem(PROFILE_KEY);
-    localStorage.removeItem(CHAT_KEY);
-    localStorage.removeItem(MAP_KEY);
-    location.reload();
+      const p = JSON.parse(raw);
+      displayNameInput.value = p.displayName || "";
+      carModelInput.value = p.carModel || "";
+      bioInput.value = p.bio || "";
+      applyProfileToUI(p);
+    } catch (e) {}
   }
 
   saveProfileBtn.addEventListener("click", saveProfile);
   loadProfileBtn.addEventListener("click", loadProfile);
-  clearProfileBtn.addEventListener("click", clearProfile);
+  resetBtn.addEventListener("click", () => {
+    localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem(CHAT_KEY);
+    location.reload();
+  });
 
   function renderChat(messages) {
     chatLog.innerHTML = "";
     if (!messages.length) {
       const empty = document.createElement("div");
       empty.className = "chat-empty";
-      empty.textContent =
-        "no road vibes yet. send something to yourself – this alpha keeps everything on your device.";
+      empty.textContent = "no road messages yet. be the first.";
       chatLog.appendChild(empty);
       return;
     }
-
-    messages.forEach((msg) => {
+    messages.forEach((m) => {
       const row = document.createElement("div");
-      row.className = "msg-row me";
-
+      row.className = "msg-row" + (m.senderId === myId ? " me" : "");
       const bubble = document.createElement("div");
       bubble.className = "msg-bubble";
-
-      const text = document.createElement("div");
-      text.textContent = msg.text;
-
+      const t = document.createElement("div");
+      t.textContent = m.text;
       const meta = document.createElement("div");
       meta.className = "msg-meta";
-      const time = new Date(msg.timestamp).toLocaleTimeString([], {
+      const time = new Date(m.ts || Date.now()).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       });
-      meta.textContent = (msg.displayName || "you") + " • " + time;
-
-      bubble.appendChild(text);
+      meta.textContent = (m.displayName || "rider") + " • " + time;
+      bubble.appendChild(t);
       bubble.appendChild(meta);
       row.appendChild(bubble);
       chatLog.appendChild(row);
     });
-
     chatLog.scrollTop = chatLog.scrollHeight;
   }
 
   function loadChat() {
     try {
       const raw = localStorage.getItem(CHAT_KEY);
-      if (!raw) {
-        renderChat([]);
-        return [];
-      }
-      const messages = JSON.parse(raw);
-      renderChat(messages);
-      return messages;
+      if (!raw) return [];
+      return JSON.parse(raw);
     } catch (e) {
-      console.error("failed to load chat", e);
-      renderChat([]);
       return [];
     }
   }
@@ -918,126 +823,172 @@
     renderChat(messages);
   }
 
-  function sendMessage(text) {
+  let chatMessages = loadChat();
+  renderChat(chatMessages);
+
+  function pushLocalMessage(msg) {
+    chatMessages.push(msg);
+    if (chatMessages.length > 200) chatMessages.shift();
+    saveChat(chatMessages);
+  }
+
+  function sendChat(text) {
     const trimmed = text.trim();
-    if (!trimmed) return;
-    const rawProfile = localStorage.getItem(PROFILE_KEY);
-    let displayName = "you";
-    if (rawProfile) {
-      try {
-        const profile = JSON.parse(rawProfile);
-        if (profile.displayName) displayName = profile.displayName;
-      } catch {}
-    }
-    const messages = loadChat();
-    messages.push({
-      id: Date.now(),
+    if (!trimmed || !connected) return;
+    const p = getProfile();
+    const msg = {
+      type: "chat",
+      payload: {
+        text: trimmed,
+        senderId: myId,
+        displayName: p.displayName,
+      },
+    };
+    ws.send(JSON.stringify(msg));
+    pushLocalMessage({
       text: trimmed,
-      displayName,
-      timestamp: Date.now(),
+      senderId: myId,
+      displayName: p.displayName,
+      ts: Date.now(),
     });
-    saveChat(messages);
     chatInput.value = "";
   }
 
-  sendBtn.addEventListener("click", () => {
-    sendMessage(chatInput.value);
-  });
-
+  sendBtn.addEventListener("click", () => sendChat(chatInput.value));
   chatInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage(chatInput.value);
+      sendChat(chatInput.value);
     }
   });
-
   emotionButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
-      const emote = btn.getAttribute("data-emote") || btn.textContent.trim();
-      sendMessage(emote);
+      sendChat(btn.getAttribute("data-emote") || btn.textContent.trim());
     });
   });
 
-  function enableMeOnMap(lat, lng) {
-    const radiusMiles = Number(radiusInput.value);
+  function connectSocket() {
+    try {
+      const roomId = "global";
+      let wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws?room=" + roomId;
+      ws = new WebSocket(wsUrl);
+      setWsStatus("connecting…", "idle");
 
-    if (!meMarker) {
-      meMarker = L.marker([lat, lng], {
-        title: "you",
-      }).addTo(map);
-    } else {
-      meMarker.setLatLng([lat, lng]);
+      ws.onopen = () => {
+        connected = true;
+        setWsStatus("connected to global", "ok");
+      };
+
+      ws.onclose = () => {
+        connected = false;
+        setWsStatus("disconnected • retrying…", "err");
+        setTimeout(connectSocket, 2000);
+      };
+
+      ws.onerror = () => {
+        connected = false;
+        setWsStatus("error • retrying…", "err");
+        try { ws.close(); } catch {}
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "chat") {
+            const p = msg.payload || {};
+            pushLocalMessage({
+              text: p.text || "",
+              senderId: p.senderId,
+              displayName: p.displayName,
+              ts: msg.ts,
+            });
+          }
+          if (msg.type === "location") {
+            const p = msg.payload || {};
+            const { userId, lat, lng, radiusMiles, profile } = p;
+            if (!userId || userId === myId) return;
+            let marker = markers.get(userId);
+            if (!marker) {
+              marker = L.circle([lat, lng], {
+                radius: milesToMeters(radiusMiles || 15),
+                color: "#ff4b8b",
+                fillColor: "#ff4b8b",
+                fillOpacity: 0.15,
+              }).addTo(map);
+              markers.set(userId, marker);
+            } else {
+              marker.setLatLng([lat, lng]);
+              marker.setRadius(milesToMeters(radiusMiles || 15));
+            }
+            const label = (profile && profile.displayName) || "rider";
+            marker.bindTooltip(label, { permanent: false });
+          }
+        } catch (e) {}
+      };
+    } catch (e) {
+      setWsStatus("failed to create socket", "err");
     }
+  }
 
-    if (!meCircle) {
-      meCircle = L.circle([lat, lng], {
-        radius: milesToMeters(radiusMiles),
-        color: "#ff4b8b",
-        fillColor: "#ff4b8b",
-        fillOpacity: 0.12,
-      }).addTo(map);
-    } else {
-      meCircle.setLatLng([lat, lng]);
-      meCircle.setRadius(milesToMeters(radiusMiles));
+  function shareLocation() {
+    if (!connected) {
+      setGeo("socket not connected", "err");
+      return;
     }
-
-    map.setView([lat, lng], 12);
-    saveMapState(lat, lng, radiusMiles);
+    if (!myLocation) {
+      setGeo("no location fix yet", "err");
+      return;
+    }
+    const radiusMiles = Number(radiusInput.value) || 15;
+    const profile = getProfile();
+    const msg = {
+      type: "location",
+      payload: {
+        userId: myId,
+        lat: myLocation.lat,
+        lng: myLocation.lng,
+        radiusMiles,
+        profile,
+      },
+    };
+    ws.send(JSON.stringify(msg));
+    setGeo("location shared to global room", "ok");
   }
 
   locateBtn.addEventListener("click", () => {
     if (!navigator.geolocation) {
-      setGeoStatus("location not supported in this browser", "err");
+      setGeo("geolocation not supported", "err");
       return;
     }
-
-    setGeoStatus("requesting gps fix…", "idle");
-
+    setGeo("requesting gps…", "idle");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        enableMeOnMap(latitude, longitude);
-        setGeoStatus("location set on this device", "ok");
+        myLocation = { lat: latitude, lng: longitude };
+        map.setView([latitude, longitude], 12);
+        setGeo("location ready", "ok");
+        if (sharingLocation) shareLocation();
       },
-      (err) => {
-        console.error("geo error", err);
-        setGeoStatus("location denied or failed", "err");
+      () => {
+        setGeo("location denied or failed", "err");
       }
     );
   });
 
-  toggleVisibilityBtn.addEventListener("click", () => {
-    visibleOnMap = !visibleOnMap;
-    if (!meMarker || !meCircle) {
-      setGeoStatus("set your location first", "err");
-      visibleOnMap = false;
-      return;
-    }
-    if (visibleOnMap) {
-      toggleVisibilityBtn.textContent = "Turn visibility off";
-      meMarker.addTo(map);
-      meCircle.addTo(map);
-      setGeoStatus("you are visible on this map only", "ok");
+  toggleShareBtn.addEventListener("click", () => {
+    sharingLocation = !sharingLocation;
+    if (sharingLocation) {
+      toggleShareBtn.textContent = "Stop sharing location";
+      shareLocation();
     } else {
-      toggleVisibilityBtn.textContent = "Go visible on map";
-      map.removeLayer(meMarker);
-      map.removeLayer(meCircle);
-      setGeoStatus("visibility off", "idle");
+      toggleShareBtn.textContent = "Share location";
+      setGeo("not sharing location", "idle");
     }
   });
 
   function init() {
-    const mapState = loadMapState();
-    if (mapState) {
-      radiusInput.value = mapState.radiusMiles || 15;
-      updateRadiusLabel();
-      enableMeOnMap(mapState.lat, mapState.lng);
-    } else {
-      updateRadiusLabel();
-    }
-
     loadProfile();
-    loadChat();
+    connectSocket();
   }
 
   init();
