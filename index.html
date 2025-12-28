@@ -1,35 +1,115 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>acar chat test</title>
+  <meta charset="UTF-8" />
+  <title>acar chat – realtime</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Pusher -->
+  <script src="https://js.pusher.com/8.2/pusher.min.js"></script>
+
+  <!-- Leaflet Map -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+  </script>
+
+  <style>
+    body { font-family: sans-serif; background: #0a0a0f; color: white; padding: 20px; }
+    #map { height: 300px; margin-top: 20px; border-radius: 12px; }
+    #log { white-space: pre-wrap; background: #111; padding: 10px; border-radius: 8px; }
+  </style>
 </head>
 <body>
-  <h1>acar chat realtime test</h1>
 
-  <input id="msg" placeholder="type message" />
-  <button onclick="send()">send</button>
+<h1>acar chat – realtime test</h1>
 
-  <pre id="log"></pre>
+<div>
+  <input id="msg" placeholder="type message…" />
+  <button onclick="sendMessage()">send</button>
+</div>
 
-  <script>
-    const log = document.getElementById("log");
-    const ws = new WebSocket(`wss://${location.host}/api/ws?room=global`);
+<pre id="log"></pre>
 
-    ws.onopen = () => log.textContent += "connected\n";
-    ws.onclose = () => log.textContent += "disconnected\n";
-    ws.onerror = () => log.textContent += "error\n";
+<div id="map"></div>
 
-    ws.onmessage = (event) => {
-      log.textContent += "recv: " + event.data + "\n";
-    };
+<script>
+  // -----------------------------
+  // 1. CONNECT TO PUSHER
+  // -----------------------------
+  const pusher = new Pusher("YOUR_PUSHER_KEY", {
+    cluster: "YOUR_CLUSTER",
+    authEndpoint: "/api/pusher-auth"
+  });
 
-    function send() {
-      const text = document.getElementById("msg").value;
-      ws.send(JSON.stringify({
-        type: "chat",
-        payload: { text }
-      }));
+  const room = "presence-global";
+  const channel = pusher.subscribe(room);
+
+  const log = (t) => {
+    document.getElementById("log").textContent += t + "\n";
+  };
+
+  channel.bind("pusher:subscription_succeeded", (members) => {
+    log("connected to room: " + room);
+    log("online users: " + members.count);
+  });
+
+  channel.bind("pusher:member_added", (member) => {
+    log("user joined: " + member.id);
+  });
+
+  channel.bind("pusher:member_removed", (member) => {
+    log("user left: " + member.id);
+  });
+
+  // -----------------------------
+  // 2. CHAT MESSAGES
+  // -----------------------------
+  channel.bind("chat-message", (data) => {
+    log(data.name + ": " + data.text);
+  });
+
+  function sendMessage() {
+    const text = document.getElementById("msg").value;
+    fetch("/api/send-message", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+  }
+
+  // -----------------------------
+  // 3. MAP + LOCATION
+  // -----------------------------
+  const map = L.map("map").setView([33.749, -84.388], 11);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+  const markers = {};
+
+  channel.bind("location-update", (data) => {
+    if (!markers[data.id]) {
+      markers[data.id] = L.marker([data.lat, data.lng]).addTo(map);
+    } else {
+      markers[data.id].setLatLng([data.lat, data.lng]);
     }
-  </script>
+  });
+
+  function sendLocation(lat, lng) {
+    fetch("/api/send-location", {
+      method: "POST",
+      body: JSON.stringify({ lat, lng }),
+    });
+  }
+
+  // Ask for location
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition((pos) => {
+      sendLocation(pos.coords.latitude, pos.coords.longitude);
+    });
+  }
+</script>
+
 </body>
 </html>
