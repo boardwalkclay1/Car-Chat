@@ -2,7 +2,8 @@ export const config = {
   runtime: "edge"
 };
 
-const rooms = new Map(); // roomId -> Set of WebSocket connections
+// In-memory room store (Edge runtime keeps this alive per region)
+const rooms = new Map(); // roomId -> Set<WebSocket>
 
 function getRoom(roomId) {
   if (!rooms.has(roomId)) {
@@ -11,21 +12,27 @@ function getRoom(roomId) {
   return rooms.get(roomId);
 }
 
-function broadcast(roomId, message, exceptSocket = null) {
+function broadcast(roomId, message, except = null) {
   const room = getRoom(roomId);
   for (const socket of room) {
-    if (socket !== exceptSocket && socket.readyState === socket.OPEN) {
+    if (socket !== except && socket.readyState === socket.OPEN) {
       socket.send(message);
     }
   }
 }
 
 export default async function handler(req) {
+  // Must be a WebSocket upgrade request
   if (req.headers.get("upgrade") !== "websocket") {
-    return new Response("Requires WebSocket", { status: 426 });
+    return new Response("Expected WebSocket", { status: 426 });
   }
 
-  const { 0: client, 1: server } = new WebSocketPair();
+  // Create WebSocket pair
+  const pair = new WebSocketPair();
+  const client = pair[0];
+  const server = pair[1];
+
+  // Determine room from query string
   const url = new URL(req.url);
   const roomId = url.searchParams.get("room") || "global";
 
@@ -34,34 +41,35 @@ export default async function handler(req) {
 
   server.accept();
 
+  // Handle messages from this client
   server.addEventListener("message", (event) => {
     try {
       const data = JSON.parse(event.data);
 
-      if (!data.type) return;
-
-      // Broadcast to everyone in the same room
-      const payload = JSON.stringify({
+      // Wrap message with metadata
+      const packet = JSON.stringify({
         type: data.type,
-        payload: data.payload || {},
+        payload: data.payload,
         roomId,
         ts: Date.now()
       });
 
-      broadcast(roomId, payload, server);
-    } catch (e) {
-      // ignore bad messages
+      // Broadcast to everyone else in the room
+      broadcast(roomId, packet, server);
+    } catch (err) {
+      // Ignore malformed messages
     }
   });
 
-  server.addEventListener("close", () => {
+  // Handle disconnect
+  const cleanup = () => {
     room.delete(server);
-  });
+  };
 
-  server.addEventListener("error", () => {
-    room.delete(server);
-  });
+  server.addEventListener("close", cleanup);
+  server.addEventListener("error", cleanup);
 
+  // Return WebSocket to client
   return new Response(null, {
     status: 101,
     webSocket: client
