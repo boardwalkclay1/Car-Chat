@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>acar chat – road vibes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Leaflet CSS for the interactive map -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    :root {
+      --bg: #05060b;
+      --bg-alt: #0b0d16;
+      --card: #111525;
+      --accent: #ff4b8b;
+      --accent-soft: rgba(255, 75, 139, 0.2);
+      --text: #f8f9ff;
+      --muted: #9ba0c6;
+      --border: #252a3f;
+      --danger: #ff4b5c;
+      --success: #4bffb3;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro", sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #151a33 0, #05060b 55%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, rgba(255, 75, 139, 0.08), transparent);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #ffb8da, #ff4b8b);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #05060b;
+      font-size: 16px;
+      box-shadow: 0 0 25px rgba(255, 75, 139, 0.65);
+    }
+
+    .brand-title {
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(5, 6, 11, 0.9);
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: #05060b;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+      box-shadow: 0 0 18px rgba(255, 75, 139, 0.45);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 26px rgba(255, 75, 139, 0.7);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--accent);
+      box-shadow: none;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.4fr);
+      gap: 14px;
+      padding: 14px;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, #191e35 0, #05060b 50%);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 0 35px rgba(0, 0, 0, 0.55);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .card-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .map-container {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      min-height: 280px;
+    }
+
+    #map {
+      width: 100%;
+      height: 320px;
+    }
+
+    @media (max-width: 900px) {
+      #map {
+        height: 260px;
+      }
+    }
+
+    .profile-card {
+      background: radial-gradient(circle at top, #20253f 0, #05060b 55%);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .profile-header {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .profile-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #ffb8da, #ff4b8b);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #05060b;
+      font-size: 20px;
+      flex-shrink: 0;
+      border: 2px solid #ffb8da;
+    }
+
+    .profile-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-main {
+      flex: 1;
+    }
+
+    .profile-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .profile-car {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .profile-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .chip {
+      font-size: 11px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: rgba(5, 6, 11, 0.85);
+    }
+
+    .chip.hot {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(255, 75, 139, 0.08);
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: #18ffa0;
+      box-shadow: 0 0 10px rgba(24, 255, 160, 0.9);
+    }
+
+    .status-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .profile-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 600px) {
+      .profile-form {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    label {
+      font-size: 11px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: rgba(5, 6, 11, 0.9);
+      color: var(--text);
+      font-size: 12px;
+      outline: none;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #5d6386;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 48px;
+    }
+
+    .input-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .input-row.full {
+      grid-column: 1 / -1;
+    }
+
+    .profile-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 4px;
+      gap: 8px;
+    }
+
+    .pills-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .pills-row .pill {
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 10px;
+    }
+
+    .chat-card {
+      background: radial-gradient(circle at top right, #20253f 0, #05060b 55%);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 10px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 8px;
+      height: 100%;
+      max-height: 480px;
+    }
+
+    .chat-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .chat-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chat-badge {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chat-badge.hot {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(255, 75, 139, 0.08);
+    }
+
+    .chat-log {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: rgba(5, 6, 11, 0.85);
+      padding: 8px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+
+    .chat-empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 11px;
+      padding: 12px 6px;
+    }
+
+    .msg-row {
+      margin-bottom: 7px;
+      display: flex;
+    }
+
+    .msg-row.me {
+      justify-content: flex-end;
+    }
+
+    .msg-bubble {
+      max-width: 76%;
+      padding: 6px 9px;
+      border-radius: 11px;
+      font-size: 12px;
+      line-height: 1.4;
+      background: #15182a;
+      border: 1px solid var(--border);
+    }
+
+    .msg-row.me .msg-bubble {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #05060b;
+    }
+
+    .msg-meta {
+      font-size: 10px;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+
+    .chat-input-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .emotion-buttons {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .emotion-btn {
+      font-size: 11px;
+      padding: 4px 6px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(5, 6, 11, 0.9);
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .emotion-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .chat-input {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chat-input input {
+      flex: 1;
+    }
+
+    .btn-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      cursor: pointer;
+      color: #05060b;
+    }
+
+    .btn-icon.secondary {
+      background: transparent;
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .range-row input[type="range"] {
+      flex: 1;
+    }
+
+    footer {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+      padding: 8px;
+      border-top: 1px solid var(--border);
+      background: rgba(5, 6, 11, 0.96);
+    }
+
+    .link-soft {
+      color: var(--accent);
+      text-decoration: none;
+      opacity: 0.85;
+    }
+
+    .link-soft:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header>
+    <div class="brand">
+      <div class="brand-badge">a</div>
+      <div>
+        <div class="brand-title">acar chat</div>
+        <div class="brand-subtitle">flirt + wave + cruise within 70 miles</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="pill">local-only alpha • your data stays on this device</div>
+      <button class="btn btn-outline" id="clearProfileBtn">Reset device profile</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">road map · live radius</div>
+          <div class="card-subtitle">
+            toggle your visibility & cruising radius. this alpha only shows <strong>you</strong> on this browser.
+          </div>
+        </div>
+        <div class="pills-row">
+          <div class="pill" id="geoStatus">location: idle</div>
+          <div class="pill" id="radiusLabel">radius: 15 mi</div>
+        </div>
+      </div>
+
+      <div class="map-container">
+        <div id="map"></div>
+      </div>
+
+      <div class="range-row">
+        <span>5 mi</span>
+        <input type="range" min="5" max="70" step="1" value="15" id="radiusInput" />
+        <span>70 mi</span>
+      </div>
+
+      <div class="pills-row">
+        <button class="btn-outline btn" id="locateBtn">Use my location</button>
+        <button class="btn-outline btn" id="toggleVisibilityBtn">Go visible on map</button>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="profile-card">
+        <div class="profile-header">
+          <div class="profile-avatar" id="avatarCircle">
+            <span id="avatarInitial">?</span>
+            <img id="avatarImg" alt="" style="display:none;" />
+          </div>
+          <div class="profile-main">
+            <div class="profile-name" id="profileNameDisplay">guest rider</div>
+            <div class="profile-car" id="profileCarDisplay">no car set yet</div>
+            <div class="profile-meta-row">
+              <div class="status-row">
+                <span class="status-dot"></span>
+                <span id="profileStatus">local-only, not connected</span>
+              </div>
+              <div class="chip hot">device-only profile</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-form">
+          <div class="input-row">
+            <label for="displayName">display name</label>
+            <input id="displayName" type="text" placeholder="e.g. neon civic, galaxy rider" />
+          </div>
+          <div class="input-row">
+            <label for="carModel">car + vibe</label>
+            <input id="carModel" type="text" placeholder="e.g. 2018 civic • stargazer" />
+          </div>
+          <div class="input-row">
+            <label for="photoUrl">photo url (optional)</label>
+            <input id="photoUrl" type="url" placeholder="link to your ride or avatar" />
+          </div>
+          <div class="input-row">
+            <label for="mood">current mood</label>
+            <select id="mood">
+              <option value="">choose a vibe</option>
+              <option value="cruising">cruising</option>
+              <option value="flirty">feeling flirty</option>
+              <option value="quiet">quiet ride</option>
+              <option value="meets">open to car meets</option>
+            </select>
+          </div>
+          <div class="input-row full">
+            <label for="bio">short profile</label>
+            <textarea id="bio" placeholder="say something short + fun for the road."></textarea>
+          </div>
+        </div>
+
+        <div class="profile-actions">
+          <button class="btn-outline btn" id="loadProfileBtn">Load saved profile</button>
+          <button class="btn" id="saveProfileBtn">Save on this device</button>
+        </div>
+      </div>
+
+      <div class="chat-card">
+        <div class="chat-header-row">
+          <div>
+            <div class="card-title">acar chat · road room</div>
+            <div class="card-subtitle">
+              this is a <strong>local-only</strong> preview. chats stay in your browser.
+            </div>
+          </div>
+          <div class="chat-badges">
+            <div class="chat-badge hot">prototype · not networked yet</div>
+            <div class="chat-badge">1-on-1 & group logic coming later</div>
+          </div>
+        </div>
+
+        <div class="chat-log" id="chatLog">
+          <div class="chat-empty">
+            no road vibes yet. set your profile, then send a wave, hug, kiss, or a message to yourself.
+          </div>
+        </div>
+
+        <div class="chat-input-row">
+          <div class="emotion-buttons">
+            <button class="emotion-btn" data-emote="👋 wave">👋 wave</button>
+            <button class="emotion-btn" data-emote="😊 smile">😊 smile</button>
+            <button class="emotion-btn" data-emote="🤗 hug">🤗 hug</button>
+            <button class="emotion-btn" data-emote="😘 kiss">😘 kiss</button>
+            <button class="emotion-btn" data-emote="🔥 flirt">🔥 flirt</button>
+          </div>
+          <div class="chat-input">
+            <input id="chatInput" type="text" placeholder="type a road message..." />
+          </div>
+          <button class="btn-icon" id="sendBtn">➤</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    acar chat · local-only road prototype · no servers, no accounts · everything stays in your browser storage.
+  </footer>
+</div>
+
+<!-- Leaflet JS for the map -->
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+
+<script>
+  // --- local storage keys ----
+  const PROFILE_KEY = "acar_profile_v1";
+  const CHAT_KEY = "acar_chat_v1";
+  const MAP_KEY = "acar_map_v1";
+
+  const displayNameInput = document.getElementById("displayName");
+  const carModelInput = document.getElementById("carModel");
+  const photoUrlInput = document.getElementById("photoUrl");
+  const moodInput = document.getElementById("mood");
+  const bioInput = document.getElementById("bio");
+
+  const profileNameDisplay = document.getElementById("profileNameDisplay");
+  const profileCarDisplay = document.getElementById("profileCarDisplay");
+  const profileStatus = document.getElementById("profileStatus");
+  const avatarCircle = document.getElementById("avatarCircle");
+  const avatarInitial = document.getElementById("avatarInitial");
+  const avatarImg = document.getElementById("avatarImg");
+
+  const saveProfileBtn = document.getElementById("saveProfileBtn");
+  const loadProfileBtn = document.getElementById("loadProfileBtn");
+  const clearProfileBtn = document.getElementById("clearProfileBtn");
+
+  const chatLog = document.getElementById("chatLog");
+  const chatInput = document.getElementById("chatInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const emotionButtons = document.querySelectorAll(".emotion-btn");
+
+  const locateBtn = document.getElementById("locateBtn");
+  const toggleVisibilityBtn = document.getElementById("toggleVisibilityBtn");
+  const geoStatus = document.getElementById("geoStatus");
+  const radiusLabel = document.getElementById("radiusLabel");
+  const radiusInput = document.getElementById("radiusInput");
+
+  let meMarker = null;
+  let meCircle = null;
+  let visibleOnMap = false;
+
+  let map = L.map("map", {
+    center: [33.749, -84.388], // atlanta as a neutral center
+    zoom: 11,
+    zoomControl: false,
+  });
+
+  L.control.zoom({ position: "bottomright" }).addTo(map);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap",
+  }).addTo(map);
+
+  function milesToMeters(mi) {
+    return mi * 1609.34;
+  }
+
+  function saveMapState(lat, lng, radiusMiles) {
+    const data = { lat, lng, radiusMiles };
+    localStorage.setItem(MAP_KEY, JSON.stringify(data));
+  }
+
+  function loadMapState() {
+    try {
+      const raw = localStorage.getItem(MAP_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setGeoStatus(text, color) {
+    geoStatus.textContent = text;
+    if (color === "ok") {
+      geoStatus.style.borderColor = "var(--success)";
+      geoStatus.style.color = "#4bffb3";
+    } else if (color === "err") {
+      geoStatus.style.borderColor = "var(--danger)";
+      geoStatus.style.color = "var(--danger)";
+    } else {
+      geoStatus.style.borderColor = "var(--border)";
+      geoStatus.style.color = "var(--muted)";
+    }
+  }
+
+  function updateRadiusLabel() {
+    const miles = Number(radiusInput.value);
+    radiusLabel.textContent = "radius: " + miles + " mi";
+  }
+
+  radiusInput.addEventListener("input", () => {
+    updateRadiusLabel();
+    if (meCircle) {
+      meCircle.setRadius(milesToMeters(Number(radiusInput.value)));
+    }
+    const state = loadMapState();
+    if (state && meMarker) {
+      const latlng = meMarker.getLatLng();
+      saveMapState(latlng.lat, latlng.lng, Number(radiusInput.value));
+    }
+  });
+
+  function updateProfileUI(profile) {
+    const name = profile.displayName || "guest rider";
+    const car = profile.carModel || "no car set yet";
+
+    profileNameDisplay.textContent = name;
+    profileCarDisplay.textContent = car;
+
+    if (profile.mood) {
+      profileStatus.textContent = profile.mood + " • local-only";
+    } else {
+      profileStatus.textContent = "local-only, not connected";
+    }
+
+    if (profile.photoUrl) {
+      avatarImg.src = profile.photoUrl;
+      avatarImg.style.display = "block";
+      avatarInitial.style.display = "none";
+    } else {
+      avatarImg.style.display = "none";
+      const initial = name.trim().charAt(0).toUpperCase() || "?";
+      avatarInitial.textContent = initial;
+      avatarInitial.style.display = "block";
+    }
+
+    displayNameInput.value = profile.displayName || "";
+    carModelInput.value = profile.carModel || "";
+    photoUrlInput.value = profile.photoUrl || "";
+    moodInput.value = profile.mood || "";
+    bioInput.value = profile.bio || "";
+  }
+
+  function saveProfile() {
+    const profile = {
+      displayName: displayNameInput.value.trim(),
+      carModel: carModelInput.value.trim(),
+      photoUrl: photoUrlInput.value.trim(),
+      mood: moodInput.value,
+      bio: bioInput.value.trim(),
+    };
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    updateProfileUI(profile);
+    profileStatus.textContent = "profile saved locally • not online";
+  }
+
+  function loadProfile() {
+    try {
+      const raw = localStorage.getItem(PROFILE_KEY);
+      if (!raw) return;
+      const profile = JSON.parse(raw);
+      updateProfileUI(profile);
+    } catch (e) {
+      console.error("failed to load profile", e);
+    }
+  }
+
+  function clearProfile() {
+    localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem(CHAT_KEY);
+    localStorage.removeItem(MAP_KEY);
+    location.reload();
+  }
+
+  saveProfileBtn.addEventListener("click", saveProfile);
+  loadProfileBtn.addEventListener("click", loadProfile);
+  clearProfileBtn.addEventListener("click", clearProfile);
+
+  function renderChat(messages) {
+    chatLog.innerHTML = "";
+    if (!messages.length) {
+      const empty = document.createElement("div");
+      empty.className = "chat-empty";
+      empty.textContent =
+        "no road vibes yet. send something to yourself – this alpha keeps everything on your device.";
+      chatLog.appendChild(empty);
+      return;
+    }
+
+    messages.forEach((msg) => {
+      const row = document.createElement("div");
+      row.className = "msg-row me";
+
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble";
+
+      const text = document.createElement("div");
+      text.textContent = msg.text;
+
+      const meta = document.createElement("div");
+      meta.className = "msg-meta";
+      const time = new Date(msg.timestamp).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      meta.textContent = (msg.displayName || "you") + " • " + time;
+
+      bubble.appendChild(text);
+      bubble.appendChild(meta);
+      row.appendChild(bubble);
+      chatLog.appendChild(row);
+    });
+
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  function loadChat() {
+    try {
+      const raw = localStorage.getItem(CHAT_KEY);
+      if (!raw) {
+        renderChat([]);
+        return [];
+      }
+      const messages = JSON.parse(raw);
+      renderChat(messages);
+      return messages;
+    } catch (e) {
+      console.error("failed to load chat", e);
+      renderChat([]);
+      return [];
+    }
+  }
+
+  function saveChat(messages) {
+    localStorage.setItem(CHAT_KEY, JSON.stringify(messages));
+    renderChat(messages);
+  }
+
+  function sendMessage(text) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const rawProfile = localStorage.getItem(PROFILE_KEY);
+    let displayName = "you";
+    if (rawProfile) {
+      try {
+        const profile = JSON.parse(rawProfile);
+        if (profile.displayName) displayName = profile.displayName;
+      } catch {}
+    }
+    const messages = loadChat();
+    messages.push({
+      id: Date.now(),
+      text: trimmed,
+      displayName,
+      timestamp: Date.now(),
+    });
+    saveChat(messages);
+    chatInput.value = "";
+  }
+
+  sendBtn.addEventListener("click", () => {
+    sendMessage(chatInput.value);
+  });
+
+  chatInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(chatInput.value);
+    }
+  });
+
+  emotionButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const emote = btn.getAttribute("data-emote") || btn.textContent.trim();
+      sendMessage(emote);
+    });
+  });
+
+  function enableMeOnMap(lat, lng) {
+    const radiusMiles = Number(radiusInput.value);
+
+    if (!meMarker) {
+      meMarker = L.marker([lat, lng], {
+        title: "you",
+      }).addTo(map);
+    } else {
+      meMarker.setLatLng([lat, lng]);
+    }
+
+    if (!meCircle) {
+      meCircle = L.circle([lat, lng], {
+        radius: milesToMeters(radiusMiles),
+        color: "#ff4b8b",
+        fillColor: "#ff4b8b",
+        fillOpacity: 0.12,
+      }).addTo(map);
+    } else {
+      meCircle.setLatLng([lat, lng]);
+      meCircle.setRadius(milesToMeters(radiusMiles));
+    }
+
+    map.setView([lat, lng], 12);
+    saveMapState(lat, lng, radiusMiles);
+  }
+
+  locateBtn.addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      setGeoStatus("location not supported in this browser", "err");
+      return;
+    }
+
+    setGeoStatus("requesting gps fix…", "idle");
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        enableMeOnMap(latitude, longitude);
+        setGeoStatus("location set on this device", "ok");
+      },
+      (err) => {
+        console.error("geo error", err);
+        setGeoStatus("location denied or failed", "err");
+      }
+    );
+  });
+
+  toggleVisibilityBtn.addEventListener("click", () => {
+    visibleOnMap = !visibleOnMap;
+    if (!meMarker || !meCircle) {
+      setGeoStatus("set your location first", "err");
+      visibleOnMap = false;
+      return;
+    }
+    if (visibleOnMap) {
+      toggleVisibilityBtn.textContent = "Turn visibility off";
+      meMarker.addTo(map);
+      meCircle.addTo(map);
+      setGeoStatus("you are visible on this map only", "ok");
+    } else {
+      toggleVisibilityBtn.textContent = "Go visible on map";
+      map.removeLayer(meMarker);
+      map.removeLayer(meCircle);
+      setGeoStatus("visibility off", "idle");
+    }
+  });
+
+  function init() {
+    const mapState = loadMapState();
+    if (mapState) {
+      radiusInput.value = mapState.radiusMiles || 15;
+      updateRadiusLabel();
+      enableMeOnMap(mapState.lat, mapState.lng);
+    } else {
+      updateRadiusLabel();
+    }
+
+    loadProfile();
+    loadChat();
+  }
+
+  init();
+</script>
+</body>
+</html>
