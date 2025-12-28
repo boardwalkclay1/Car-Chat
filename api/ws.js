@@ -1,67 +1,35 @@
-export const config = {
-  runtime: "edge"
-};
+<!DOCTYPE html>
+<html>
+<head>
+  <title>acar chat test</title>
+</head>
+<body>
+  <h1>acar chat realtime test</h1>
 
-// In-memory room store
-const rooms = new Map(); // roomId -> Set<WebSocket>
+  <input id="msg" placeholder="type message" />
+  <button onclick="send()">send</button>
 
-function getRoom(roomId) {
-  if (!rooms.has(roomId)) {
-    rooms.set(roomId, new Set());
-  }
-  return rooms.get(roomId);
-}
+  <pre id="log"></pre>
 
-function broadcast(roomId, message, except = null) {
-  const room = getRoom(roomId);
-  for (const socket of room) {
-    if (socket !== except && socket.readyState === socket.OPEN) {
-      socket.send(message);
+  <script>
+    const log = document.getElementById("log");
+    const ws = new WebSocket(`wss://${location.host}/api/ws?room=global`);
+
+    ws.onopen = () => log.textContent += "connected\n";
+    ws.onclose = () => log.textContent += "disconnected\n";
+    ws.onerror = () => log.textContent += "error\n";
+
+    ws.onmessage = (event) => {
+      log.textContent += "recv: " + event.data + "\n";
+    };
+
+    function send() {
+      const text = document.getElementById("msg").value;
+      ws.send(JSON.stringify({
+        type: "chat",
+        payload: { text }
+      }));
     }
-  }
-}
-
-export default async function handler(req) {
-  if (req.headers.get("upgrade") !== "websocket") {
-    return new Response("Expected WebSocket", { status: 426 });
-  }
-
-  const pair = new WebSocketPair();
-  const client = pair[0];
-  const server = pair[1];
-
-  const url = new URL(req.url);
-  const roomId = url.searchParams.get("room") || "global";
-
-  const room = getRoom(roomId);
-  room.add(server);
-
-  server.accept();
-
-  server.addEventListener("message", (event) => {
-    try {
-      const data = JSON.parse(event.data);
-
-      const packet = JSON.stringify({
-        type: data.type,
-        payload: data.payload,
-        roomId,
-        ts: Date.now()
-      });
-
-      broadcast(roomId, packet, server);
-    } catch (err) {}
-  });
-
-  const cleanup = () => {
-    room.delete(server);
-  };
-
-  server.addEventListener("close", cleanup);
-  server.addEventListener("error", cleanup);
-
-  return new Response(null, {
-    status: 101,
-    webSocket: client
-  });
-}
+  </script>
+</body>
+</html>
